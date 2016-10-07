@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <stack>
+#include <cstring>
 #include <iostream>
 #include <stdlib.h>     /* srand, rand */
 
@@ -15,7 +16,7 @@ template <class T> // int, float, double etc..
 class Graph {
 public:
 
-  // Documentation, it has to be between [0..100]
+  // 
   Graph(int size = 10, int density = 10, T range = 0):
     m_size(size),
     m_density(density),
@@ -38,14 +39,13 @@ public:
   }
 
   T* getAdjances(int node) {
-    return m_graph[node];
+    return &m_graph[node][0];
   }
-  
+
   inline bool adjacent(int x, int y) {
     return m_graph[x][y] != 0;
   }
 
-  // Not needed
   vector<int>* neighbors(int x) {
     vector<T>* neighbors = new vector<T>();
     T* x_star = m_graph[x];
@@ -54,7 +54,22 @@ public:
 	neighbors->push_back(i);
     return neighbors;
   }
-  
+
+  static Graph<T>* custom(T* cgraph, int size, T range) {
+    Graph<T> *graph = new Graph<T>(size, 10, range);
+    for (int i = 0; i < size; i++)
+      delete[] graph->m_graph[i];
+    delete[] graph->m_graph;
+
+    // Allocate and copy it over
+    T** copy = new T*[size];
+    for (int i = 0; i < size; i++) {
+      copy[i] = new T[size];
+      memcpy(&copy[i][0], &cgraph[i * size], sizeof(T) * size);
+    }
+    graph->m_graph = copy;
+  }
+    
   friend ostream& operator << (std::ostream& out, const Graph<T>& object) {
     out << "Graph size, density, range = ["
 	<< object.m_size << "]["
@@ -106,78 +121,112 @@ private:
   }
 };
 
+
+
 template <class T>
 class Dijkstra {
 public:
-  Dijkstra(Graph<T> *graph)
-    :m_graph(graph){ }
+  Dijkstra(Graph<T> *graph, bool verbose = false)
+    :m_graph(graph), m_verbose(verbose){ }
 
- T compute_path(int root, int dest) {
+ T SPT(int root, int dest = -1) {
     stack<int> Q;
     T *cost = new int[m_graph->getSize()];
     int *pred = new int[m_graph->getSize()];
-    
+    bool *visited = new bool[m_graph->getSize()]();
+
+    // The cost vector is initializated with range plus one value in order
+    // to accept any path at the first iterations.
     for (int i = 0; i < m_graph->getSize(); i++)
       cost[i] = m_graph->getRange() + 1;
-    for (int i = 0; i < m_graph->getSize(); i++) {
-      if (i == root)
-	pred[i] = root;
-      else 
-	pred[i] = 0;
-    }
+    cost[root] = 0;
+    memset(pred, root, sizeof(pred)* m_graph->getSize());
     Q.push(root);
     while (Q.size() > 0) {
       int node = Q.top();
       Q.pop();
+      visited[node] = true;
       T* edges = m_graph->getAdjances(node);
      
-      // Outgoing start
+      // Outwards star, excluding the node itself
       for (int i = 0; i < m_graph->getSize(); i++) {
+	if (node == i)
+	  continue;
 	T icost = cost[node] + edges[i];
-
-	cout << "star(" << node << ")" <<  icost << "<" << cost[i] << endl;
+	if (m_verbose)
+	  cout << "star(" << node << "," << i << ") "
+	       <<  cost[node] << " + " << edges[i] << "(" << icost << ")"
+	       << " < " << cost[i] << endl;
+	
 	//Bellman-Ford condition
 	if (icost < cost[i]) {
 	  pred[i] = node;
 	  cost[i] = icost;
-	  cout << "pushing" << i;
-	  Q.push(i);
+	  if (!visited[i])
+	    Q.push(i);
 	}
       }
     }
 
-    int tmp = dest;
-    while (tmp != root) {
-      cout << tmp << ",";
-      tmp = pred[tmp];
+    // Print vector cost
+    if (m_verbose) {
+      cout << "[";
+      for (int i = 0; i < m_graph->getSize(); i++)
+	cout << cost[i] << ",";
+      cout << '\b' << "]" << endl;
+    }		     
+    
+    // Compute average as requested and return it
+    if (dest == -1) {
+      T accumulator = 0;
+      for (int i = 0; i < m_graph->getSize(); i++)
+	accumulator += cost[i];
+      return accumulator / m_graph->getSize();
+    }
+
+    // Print SPT for destination node and return its cost, this can be useful
+    // when debugging the corrctness of the algorithm.
+    int node = pred[dest];
+    cout << dest << ",";
+    while (node != root) {
+      cout << node << ",";
+      node = pred[node];
     }
     cout << root << endl;
-      
     T value = cost[dest];
     delete[] cost;
     delete[] pred;
-    return cost[dest]; 
+    delete[] visited;
+    return value;
   }
   
 private:
-  Graph<T>* m_graph; 
-  
+  Graph<T>*  m_graph;
+  const bool m_verbose;
 };
 
 
+int nodes[4][4] = {
+  { 6, 1, 5, 5 },
+  { 5, 6, 3, 3 },
+  { 1, 3, 6, 1 },
+  { 5, 3, 1, 6 }
+};
+  
 int main() {
-  {
-    Graph<int> test(40, 80, 5);
-    cout << test;
-    vector<int>* neighbors = test.neighbors(1);
-    for (vector<int>::iterator it = neighbors->begin();
-	 it != neighbors->end(); ++it) {
-      cout << *it;
+    {
+      // First run uses the custom graph, useful for validation
+      Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5);
+      cout << *custom;
+      Dijkstra<int> spt(custom, true);
+      cout << spt.SPT(0) << endl;
     }
-    cout << endl;
-
-    Dijkstra<int> d(&test);
-    d.compute_path(0, 3);
-  }
+    {
+      // Second attempt with much bigger graph, broken
+      Graph<int> generated(60, 80, 50);
+      cout << generated;
+      // Dijkstra<int> spt(&generated, false);
+      // cout << spt.SPT(0) << endl;
+    }
 }
 
