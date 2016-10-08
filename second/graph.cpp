@@ -68,6 +68,7 @@ public:
       memcpy(&copy[i][0], &cgraph[i * size], sizeof(T) * size);
     }
     graph->m_graph = copy;
+    return graph;
   }
     
   friend ostream& operator << (std::ostream& out, const Graph<T>& object) {
@@ -86,9 +87,9 @@ public:
   
 private:
   T** m_graph;
+  const int m_size;
   const float m_density;
   const T m_range;
-  const int m_size;
 
   void generate() {
     srand(time(NULL));
@@ -104,14 +105,16 @@ private:
 	
 	// No loop
 	if (i == j) {
-	  m_graph[i][j] = m_graph[i][j] = 0;
+	  m_graph[i][j] = m_graph[j][i] = m_range + 1;
 	  continue;
 	}
 	bool edge = (rand() % 100 + 1) < m_density;
 	
 	// No connection between i <-> j
-	if (!edge)
-	  continue;
+	if (!edge) {
+	  m_graph[i][j] = m_graph[j][i] = m_range + 1;
+	  continue; 
+	}
 
 	// Assign a cost to the edge
 	T cost = rand() % m_range + 1;
@@ -121,17 +124,17 @@ private:
   }
 };
 
-
-
 template <class T>
 class Dijkstra {
 public:
-  Dijkstra(Graph<T> *graph, bool verbose = false)
-    :m_graph(graph), m_verbose(verbose){ }
+  Dijkstra(Graph<T>* graph, bool verbose = false)
+    :m_graph(graph), m_verbose(verbose){ }  
+   
+  ~Dijkstra() { }
 
  T SPT(int root, int dest = -1) {
     stack<int> Q;
-    T *cost = new int[m_graph->getSize()];
+    T *cost = new T[m_graph->getSize()];
     int *pred = new int[m_graph->getSize()];
     bool *visited = new bool[m_graph->getSize()]();
 
@@ -140,18 +143,28 @@ public:
     for (int i = 0; i < m_graph->getSize(); i++)
       cost[i] = m_graph->getRange() + 1;
     cost[root] = 0;
-    memset(pred, root, sizeof(pred)* m_graph->getSize());
+    
+    // Default predecessor is root for all nodes
+    for (int i = 0; i < m_graph->getSize(); i++)
+      pred[i] = root;
     Q.push(root);
-    while (Q.size() > 0) {
+    while (!Q.empty()) {
       int node = Q.top();
       Q.pop();
       visited[node] = true;
       T* edges = m_graph->getAdjances(node);
      
-      // Outwards star, excluding the node itself
+      // Examining the outwards star
       for (int i = 0; i < m_graph->getSize(); i++) {
+
+	// Do not consider loops
 	if (node == i)
 	  continue;
+
+	// There is no edge in this case
+	if (edges[i] == m_graph->getRange() + 1)
+	  continue;
+
 	T icost = cost[node] + edges[i];
 	if (m_verbose)
 	  cout << "star(" << node << "," << i << ") "
@@ -170,7 +183,7 @@ public:
 
     // Print vector cost
     if (m_verbose) {
-      cout << "[";
+      cout << "Costs: [";
       for (int i = 0; i < m_graph->getSize(); i++)
 	cout << cost[i] << ",";
       cout << '\b' << "]" << endl;
@@ -181,13 +194,17 @@ public:
       T accumulator = 0;
       for (int i = 0; i < m_graph->getSize(); i++)
 	accumulator += cost[i];
+      delete[] cost;
+      delete[] pred;
+      delete[] visited;
+      cout << accumulator << "/" << m_graph->getSize() << endl;
       return accumulator / m_graph->getSize();
     }
 
     // Print SPT for destination node and return its cost, this can be useful
-    // when debugging the corrctness of the algorithm.
+    // when debugging the correctness of the algorithm.
     int node = pred[dest];
-    cout << dest << ",";
+    cout << "Path: " << dest << ",";
     while (node != root) {
       cout << node << ",";
       node = pred[node];
@@ -220,13 +237,14 @@ int main() {
       cout << *custom;
       Dijkstra<int> spt(custom, true);
       cout << spt.SPT(0) << endl;
+      delete custom;
     }
     {
       // Second attempt with much bigger graph, broken
-      Graph<int> generated(60, 80, 50);
+      Graph<int> generated(50, 10, 10);
       cout << generated;
-      // Dijkstra<int> spt(&generated, false);
-      // cout << spt.SPT(0) << endl;
+      Dijkstra<int> spt(&generated, false);
+      cout << spt.SPT(0) << endl;
     }
 }
 
