@@ -230,11 +230,11 @@ private:
 // Custom graph used to validate the results
 int nodes[4][4] = {
   { 6, 1, 5, 5 },
-  { 5, 6, 3, 3 },
-  { 1, 3, 6, 1 },
-  { 5, 3, 1, 6 }
+  { 1, 6, 3, 1 },
+  { 5, 3, 6, 3 },
+  { 5, 1, 3, 6 }
 };
-  
+
 int main() {
     {
       
