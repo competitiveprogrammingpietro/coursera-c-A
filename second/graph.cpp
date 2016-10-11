@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <stdlib.h>     /* srand, rand */
+#include <time.h>
 
 using namespace std;
 
@@ -16,7 +17,6 @@ template <class T> // int, float, double etc..
 class Graph {
 public:
 
-  // 
   Graph(int size = 10, int density = 10, T range = 0):
     m_size(size),
     m_density(density),
@@ -133,6 +133,8 @@ public:
   ~Dijkstra() { }
 
  T SPT(int root, int dest = -1) {
+
+    // Stack used 
     stack<int> Q;
     T *cost = new T[m_graph->getSize()];
     int *pred = new int[m_graph->getSize()];
@@ -235,12 +237,12 @@ int main() {
       // First run uses the custom graph, useful for validation
       Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5);
       cout << *custom;
-      Dijkstra<int> spt(custom, true);
+      Dijkstra<int> spt(custom, false);
       cout << spt.SPT(0) << endl;
       delete custom;
     }
     {
-      // Second attempt with much bigger graph, broken
+      // Second attempt with much bigger graph
       Graph<int> generated(50, 10, 10);
       cout << generated;
       Dijkstra<int> spt(&generated, false);
