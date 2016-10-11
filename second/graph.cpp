@@ -60,12 +60,12 @@ public:
     for (int i = 0; i < size; i++)
       delete[] graph->m_graph[i];
     delete[] graph->m_graph;
-
-    // Allocate and copy it over
+    
     T** copy = new T*[size];
     for (int i = 0; i < size; i++) {
-      copy[i] = new T[size];
-      memcpy(&copy[i][0], &cgraph[i * size], sizeof(T) * size);
+      copy[i] = new T[size]; 
+      for (int j = 0; j < size; j++)
+	copy[i][j] = cgraph[i*size + j];
     }
     graph->m_graph = copy;
     return graph;
@@ -132,6 +132,10 @@ public:
    
   ~Dijkstra() { }
 
+ // The Shortest Path Tree (SPT) method computes the shortest paths between
+ // the root node given as argument and all the other nodes.
+ // If a destination node is give the method computes the shortest path
+ // between the root and the destination node only.
  T SPT(int root, int dest = -1) {
 
     // Stack used for Breadth First Search 
