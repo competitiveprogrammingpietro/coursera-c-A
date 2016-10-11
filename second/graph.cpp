@@ -134,7 +134,7 @@ public:
 
  T SPT(int root, int dest = -1) {
 
-    // Stack used 
+    // Stack used for Breadth First Search 
     stack<int> Q;
     T *cost = new T[m_graph->getSize()];
     int *pred = new int[m_graph->getSize()];
@@ -199,7 +199,6 @@ public:
       delete[] cost;
       delete[] pred;
       delete[] visited;
-      cout << accumulator << "/" << m_graph->getSize() << endl;
       return accumulator / m_graph->getSize();
     }
 
@@ -224,7 +223,7 @@ private:
   const bool m_verbose;
 };
 
-
+// Custom graph used to validate the results
 int nodes[4][4] = {
   { 6, 1, 5, 5 },
   { 5, 6, 3, 3 },
@@ -234,19 +233,19 @@ int nodes[4][4] = {
   
 int main() {
     {
+      
       // First run uses the custom graph, useful for validation
       Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5);
-      cout << *custom;
       Dijkstra<int> spt(custom, false);
-      cout << spt.SPT(0) << endl;
+      cout << "Average SPT from root node(0) : " << spt.SPT(0) << endl;
       delete custom;
     }
     {
+      
       // Second attempt with much bigger graph
       Graph<int> generated(50, 10, 10);
-      cout << generated;
       Dijkstra<int> spt(&generated, false);
-      cout << spt.SPT(0) << endl;
+      cout << "Average SPT from root node(0) : " << spt.SPT(0) << endl;
     }
 }
 
