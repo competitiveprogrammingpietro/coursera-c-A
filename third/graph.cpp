@@ -19,7 +19,6 @@ template <class T> // int, float, double etc..
 class Graph {
 public:
 
-  // 
   Graph(int size = 10, int density = 10, T range = 0, bool verbose = false):
     m_size(size),
     m_verbose(verbose) {
@@ -73,8 +72,7 @@ public:
     return neighbors;
   }
 
-  
- T SPT(int root, int dest = -1) {
+  T SPT(int root, int dest = -1) {
     stack<int> Q;
     T *cost = new int[m_size];
     int *pred = new int[m_size];
@@ -161,6 +159,10 @@ public:
     return value;
   }  
 
+  // Prim's algorithm
+  T[] MST() {
+    
+  }
   static Graph<T>* custom(T* cgraph, int size, T range, bool verbose = false) {
     Graph<T> *graph = new Graph<T>(size, 10, range, verbose);
     for (int i = 0; i < size; i++)
@@ -170,8 +172,9 @@ public:
     // Allocate and copy it over
     T** copy = new T*[size];
     for (int i = 0; i < size; i++) {
-      copy[i] = new T[size];
-      memcpy(&copy[i][0], &cgraph[i * size], sizeof(T) * size);
+      copy[i] = new T[size]; 
+      for (int j = 0; j < size; j++)
+	copy[i][j] = cgraph[i*size + j];
     }
     graph->m_graph = copy;
   }
@@ -225,29 +228,16 @@ private:
   }
 };
 
-
-
-template <class T>
-class Dijkstra {
-public:
-  Dijkstra(Graph<T> *graph, bool verbose = false)
-    :m_graph(graph), m_verbose(verbose){ }
-  
-private:
-  Graph<T>*  m_graph;
-  const bool m_verbose;
-};
-
-
 int nodes[4][4] = {
   { 6, 1, 5, 5 },
-  { 5, 6, 3, 3 },
-  { 1, 3, 6, 1 },
-  { 5, 3, 1, 6 }
+  { 1, 6, 3, 1 },
+  { 5, 3, 6, 3 },
+  { 5, 1, 3, 6 }
 };
   
 int main() {
     // {
+      
     //   // First run uses the custom graph, useful for validation
     //   Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5, true);
     //   cout << *custom;
