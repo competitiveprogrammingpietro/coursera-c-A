@@ -3,7 +3,6 @@
    Homework 2: Implement Dijkstra's Algorithm
    Pietro Paolini
  */
-#include <iostream>
 #include <vector>
 #include <stack>
 #include <cstring>
@@ -12,10 +11,46 @@
 #include <fstream>
 #include <string>
 #include <limits>
+#include <queue>
 
 using namespace std;
 
+
+// The custom comparator class compare two node ids using the cost vector given
+// as a parameter in the constructor, the less the cost the higher the priority
 template <class T> // int, float, double etc..
+class NodeComparison  {
+public:
+  NodeComparison(T*& cost = 0):m_cost(cost) { }
+  bool operator() (const int i, const int j) {
+    return  (m_cost[i] > m_cost[j]);
+  }
+private:
+  const T* m_cost;
+};
+
+// Class holding the MST
+template <class T>
+class MST {
+public:
+  const T*  m_pred;
+  const T   m_cost;
+  const int m_size;
+  MST(T*& pred, int size, T cost):m_pred(pred), m_cost(cost), m_size(size) { }
+  friend ostream& operator << (std::ostream& out, const MST<T>& object) {
+     out << "MST cost  = [" << object.m_cost << "]" << endl;
+     out << "Predecessor (edges): " << '\n' << "[";
+     for (int i = 0; i < object.m_size; i++)
+       out << object.pred[i] << ",";
+     out << '\b' << "]" << endl;
+     return out;
+   }
+
+};
+
+// General Graph class contains the MST, SPT method plus a bunch of
+// accessories methods.
+template <class T>
 class Graph {
 public:
 
@@ -159,10 +194,51 @@ public:
     return value;
   }  
 
-  // Prim's algorithm
-  T[] MST() {
+  /* Prim's algorithm, the algorithm is structured following the page 254 of:
+   * 
+   * http://www.di.unipi.it/optimize/Courses/ROM/1314/Appunti/Appunti1314.pdf
+   * 
+   * The document is in Italian, the pseudocode should be understanble though.
+   * 
+   * The algorithm returns the MST under the form of a vector of predecessors
+   * and a root node where to start is required as a parameter.
+   */ 
+  int* MST(int root) {
+    int *pred = new int[m_size];
+    T *cost = new int[m_size];
+    bool *visited = new bool[m_size] ();
+    priority_queue<int, vector<int>, NodeComparison<T> > Q(cost);
     
+    for (int i = 0; i < m_size; i++) {
+      pred[i] = root;
+      cost[i] = numeric_limits<T>::max();
+    }
+    cost[root] = 0;
+    Q.push(root);
+    do {
+      int node = Q.top();
+      Q.pop();
+      visited[node] = true;
+      T* edges = getAdjances(node);
+      for (int i = 0; i < m_size; i++) {
+	if (edges[i] >= cost[i]) 
+	  continue;
+	cost[i] = edges[i];
+	pred[i] = node;
+	if (visited[i])
+	  continue;
+	Q.push(i);
+      }
+    } while (Q.size() > 0);
+
+    T total = 0;
+    for (int i = 0; i < m_size; i++)
+      total += cost[i];
+    delete [] visited;
+    delete [] cost;
+    return MST<T>(pred, m_size, total);
   }
+  
   static Graph<T>* custom(T* cgraph, int size, T range, bool verbose = false) {
     Graph<T> *graph = new Graph<T>(size, 10, range, verbose);
     for (int i = 0; i < size; i++)
@@ -236,24 +312,33 @@ int nodes[4][4] = {
 };
   
 int main() {
-    // {
+    {
       
-    //   // First run uses the custom graph, useful for validation
-    //   Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5, true);
-    //   cout << *custom;
-    //   cout << custom->SPT(0) << endl;
-    //   delete custom;
-    // }
+      // First run uses the custom graph, useful for validation
+      Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5, true);
+      cout << *custom;
+      cout << custom->SPT(0) << endl;
+      MST<int> result = custom->MST(0);
+      cout << result << endl;
+      delete custom;
+    }
     // {
     //   // Second attempt with much bigger graph, broken
-    //   Graph<int> generated(60, 80, 50, true);
+    //   Graph<int> generated(60, 80, 50, false);
     //   cout << generated;
     //   cout << generated.SPT(0) << endl;
+    //   int* MST = generated.MST(0);
+    //   cout << "MST [";
+    //   for (int i = 0; i < 60; i++)
+    // 	cout << MST[i] << ",";
+    //   cout << '\b' << "]" << endl;
     // }
-    {
-      Graph<int> graph_from_file = Graph<int>("graph_data.txt");
-      cout << graph_from_file << endl;
-      cout << graph_from_file.SPT(0) << endl;
-    }
+    
+    // {
+    //   Graph<int> graph_from_file = Graph<int>("graph_data.txt");
+    //   cout << graph_from_file << endl;
+    //   cout << "Average SPT: " << graph_from_file.SPT(0) << endl;
+      
+    // }
 }
 
