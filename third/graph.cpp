@@ -29,19 +29,35 @@ private:
   const T* m_cost;
 };
 
-// Class holding the MST
+// Class holding the MST result
 template <class T>
 class MST {
 public:
-  const T*  m_pred;
+  int*  m_pred;
   const T   m_cost;
   const int m_size;
-  MST(T*& pred, int size, T cost):m_pred(pred), m_cost(cost), m_size(size) { }
+  
+  MST(T*& pred, int size, T cost):
+    m_cost(cost), m_size(size) {
+    m_pred = new int[size];
+    memcpy(m_pred, pred, sizeof(int) * size);
+  }
+  
+  MST(const MST<T>& obj):
+    m_cost(obj.m_cost), m_size(obj.m_size) {
+    m_pred = new int[obj.m_size];
+    memcpy(m_pred, obj.m_pred, sizeof(int) * obj.m_size);
+  }
+
+  ~MST() {
+    delete [] m_pred;
+  }
+  
   friend ostream& operator << (std::ostream& out, const MST<T>& object) {
      out << "MST cost  = [" << object.m_cost << "]" << endl;
-     out << "Predecessor (edges): " << '\n' << "[";
+     out << "MST Predecessor (edges): " << '\n' << "[";
      for (int i = 0; i < object.m_size; i++)
-       out << object.pred[i] << ",";
+       out << object.m_pred[i] << ",";
      out << '\b' << "]" << endl;
      return out;
    }
@@ -53,7 +69,6 @@ public:
 template <class T>
 class Graph {
 public:
-
   Graph(int size = 10, int density = 10, T range = 0, bool verbose = false):
     m_size(size),
     m_verbose(verbose) {
@@ -63,19 +78,22 @@ public:
   Graph(string filename, bool verbose = false):
     m_verbose(verbose) {
     ifstream graph_data(filename.c_str());
+    T cost, max = numeric_limits<T>::max();  
 
     // The first line gives the graph's size
     graph_data >> m_size;
     m_graph = new T*[m_size];
     for (int i = 0; i < m_size; i++) {
       m_graph[i] = new T[m_size];
-
-      // No loop
-      m_graph[i][0] = numeric_limits<T>::max();
+      
+      // Initalize the array, this eliminates loops as well
+      // as the max value means no edge between the two nodes
+      for (int j = 0; j < m_size; j++)
+	m_graph[i][j] = max;
     }
 
+    // Read the tuples (src, dst, cost) and store them
     int i, j;
-    T cost, max = numeric_limits<T>::max();  
     while (graph_data >> i >> j >> cost)
       m_graph[i][j] = cost;
   }
@@ -107,7 +125,18 @@ public:
     return neighbors;
   }
 
-  T SPT(int root, int dest = -1) {
+  /* Dijkstra's algorithm, the algorithm is structured following the page 105 of:
+   * 
+   * http://www.di.unipi.it/optimize/Courses/ROM/1314/Appunti/Appunti1314.pdf
+   * 
+   * The document is in Italian but the pseudocode should be well understanble 
+   * without knowing the language though.
+   * 
+   * The algorithm returns :
+   * 1) the average value for the SPT computed if no destination is given
+   * 2) the cost to get to the given destination otherwise
+   */ 
+  T Dijkstra_SPT(int root, int dest = -1) {
     stack<int> Q;
     T *cost = new int[m_size];
     int *pred = new int[m_size];
@@ -175,11 +204,13 @@ public:
       delete[] cost;
       delete[] pred;
       delete[] visited;
+      if (m_verbose)
+	cout << accumulator << "/" << m_size << endl;
       return accumulator / m_size;
     }
 
     // Print SPT for destination node and return its cost, this can be useful
-    // when debugging the corrctness of the algorithm.
+    // when debugging the correctness of the algorithm.
     int node = pred[dest];
     cout << dest << ",";
     while (node != root) {
@@ -191,6 +222,8 @@ public:
     delete[] cost;
     delete[] pred;
     delete[] visited;
+
+    // Return the cost to the destination for our SPT
     return value;
   }  
 
@@ -203,7 +236,7 @@ public:
    * The algorithm returns the MST under the form of a vector of predecessors
    * and a root node where to start is required as a parameter.
    */ 
-  int* MST(int root) {
+  MST<T> Prim_MST(int root) {
     int *pred = new int[m_size];
     T *cost = new int[m_size];
     bool *visited = new bool[m_size] ();
@@ -234,9 +267,12 @@ public:
     T total = 0;
     for (int i = 0; i < m_size; i++)
       total += cost[i];
+    MST<T> result = MST<T>(pred, m_size, total);
+    
     delete [] visited;
     delete [] cost;
-    return MST<T>(pred, m_size, total);
+    delete [] pred;
+    return result;
   }
   
   static Graph<T>* custom(T* cgraph, int size, T range, bool verbose = false) {
@@ -305,40 +341,43 @@ private:
 };
 
 int nodes[4][4] = {
-  { 6, 1, 5, 5 },
-  { 1, 6, 3, 1 },
-  { 5, 3, 6, 3 },
-  { 5, 1, 3, 6 }
+  { 2147483647, 1, 5, 5 },
+  { 1, 2147483647, 3, 1 },
+  { 5, 3, 2147483647, 3 },
+  { 5, 1, 3, 2147483647}
 };
   
-int main() {
+int main(int argn, char **argv) {
+  bool verbose = false;
+  
+  if (argv[1]) {
+    verbose = true;
+  }
     {
-      
       // First run uses the custom graph, useful for validation
       Graph<int> *custom = Graph<int>::custom((int *) &nodes[0], 4, 5, true);
       cout << *custom;
-      cout << custom->SPT(0) << endl;
-      MST<int> result = custom->MST(0);
+      if (verbose)
+	cout << "SPT cost average " << custom->Dijkstra_SPT(0) << endl;
+      MST<int> result = custom->Prim_MST(0);
       cout << result << endl;
       delete custom;
     }
-    // {
-    //   // Second attempt with much bigger graph, broken
-    //   Graph<int> generated(60, 80, 50, false);
-    //   cout << generated;
-    //   cout << generated.SPT(0) << endl;
-    //   int* MST = generated.MST(0);
-    //   cout << "MST [";
-    //   for (int i = 0; i < 60; i++)
-    // 	cout << MST[i] << ",";
-    //   cout << '\b' << "]" << endl;
-    // }
-    
-    // {
-    //   Graph<int> graph_from_file = Graph<int>("graph_data.txt");
-    //   cout << graph_from_file << endl;
-    //   cout << "Average SPT: " << graph_from_file.SPT(0) << endl;
-      
-    // }
+    {
+      // Second attempt with much bigger graph
+      Graph<int> generated(60, 80, 50, false);
+      if (verbose)
+	cout << generated;
+      cout << "SPT cost average " << generated.Dijkstra_SPT(0) << endl;
+      MST<int> result = generated.Prim_MST(0);
+      cout << result << endl;
+    }
+    {
+      Graph<int> graph_from_file = Graph<int>("graph_data.txt", false);
+      if (verbose)
+	cout << graph_from_file << endl;
+      cout << "SPT cost average " << graph_from_file.Dijkstra_SPT(0) << endl;
+      cout << graph_from_file.Prim_MST(0) << endl;
+    }
 }
 
