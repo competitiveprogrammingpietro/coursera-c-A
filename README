@@ -1,8 +1,9 @@
 The repository contains the completed homeworks for the Coursera training
 course "C++ for C programmers". There have been three homeworks :
 
-1 - Design a class representing a class
-2 - Use the class to implement the Dijkstra's SPT algorithm
+1 - Very basic C++ example covering input and inline
+2 - Design a class representing a graph and use it to implement the Dijkstra's
+    SPT algorithm
 3 - Add a further method to compute the Prim's MST algorithm
 
 
