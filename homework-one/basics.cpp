@@ -10,8 +10,8 @@
 using namespace std;
 const int LENGTH = 40;
 
-// This functions mirrors the one defined in the C implementation but they take
-// advantages of some of the C++ features explained in the first week lecture.
+// These functions mirror the ones defined in the C implementation but they take
+// advantages of some of the C++ features discussed during the first week lectures.
 template <class T>
 inline void sum (T& accumulator, int length, vector<T>& data)
 {
